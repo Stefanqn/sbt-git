@@ -1,6 +1,6 @@
 enablePlugins(GitVersioning)
 
-val checkVersion = taskKey[Unit]("checks the version is the tag versino")
+val checkVersion = taskKey[Unit]("checks the version is the tag version")
 checkVersion := {
   val v = version.value
   val prop = sys.props("project.version")

@@ -40,6 +40,8 @@ object SbtGit {
 
     // The remote repository we're using.
     val gitRemoteRepo = SettingKey[String]("git-remote-repo", "The remote git repository associated with this project")
+
+    val addScmInfoToManifest = SettingKey[Boolean]("add-scm-to-manifest", "Add git project information to the manifest.mf")
   }
 
   object GitCommand {
@@ -147,7 +149,9 @@ object SbtGit {
   )
   val projectSettings = Seq(
     // Input task to run git commands directly.
-    commands += GitCommand.command
+    commands += GitCommand.command,
+    addScmInfoToManifest := true,
+    scmInfoInManifest
   )
 
   /** A Predefined setting to use JGit runner for git. */
@@ -156,6 +160,23 @@ object SbtGit {
   /** Adapts the project prompt to show the current project name *and* the current git branch. */
   def showCurrentGitBranch: Setting[_] =
     shellPrompt := GitCommand.prompt
+
+
+  def scmInfoInManifest: Setting[_] = Compile / packageBin / packageOptions ++= {
+      if(addScmInfoToManifest.value) {
+        val git = GitKeys.gitReader.value
+        val manifestAttributes = List[(String, String)](
+          "SCM-origin" -> git.withGit(_.remoteOrigin),
+          "SCM-commit-Sha" -> git.withGit(_.headCommitSha).getOrElse("N/A"),
+          "SCM-commit-date" -> git.withGit(_.headCommitDate).getOrElse("N/A"),
+          "SCM-branch" -> git.withGit(_.branch),
+          "SCM-tags" -> git.withGit(_.currentTags.mkString(","))
+        ).map(t => new java.util.jar.Attributes.Name(t._1) -> t._2)
+
+        Seq(Package.ManifestAttributes(manifestAttributes: _*))
+      } else
+        Seq.empty[PackageOption]
+    }
 
 
   /** Uses git to control versioning.
@@ -291,6 +312,7 @@ object GitPlugin extends AutoPlugin {
     def versionWithGit = SbtGit.versionWithGit
     def useJGit = SbtGit.useJGit
     def showCurrentGitBranch = SbtGit.showCurrentGitBranch
+    def addScmInfoToManifest = SbtGit.scmInfoInManifest
   }
   override def buildSettings: Seq[Setting[_]] = SbtGit.buildSettings
   override def projectSettings: Seq[Setting[_]] = SbtGit.projectSettings

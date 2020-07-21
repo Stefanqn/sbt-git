@@ -1,0 +1,3 @@
+> checkManifestContainsSCM
+> set addScmInfoToManifest:=false
+> checkManifestNotContainsSCM
